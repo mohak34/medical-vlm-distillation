@@ -52,7 +52,8 @@ uv run python scripts/cache_teacher.py
 # 5. Overfit check (any arm): 256 training images, 30 epochs, loss should go to ~0.
 uv run python -m discipulus.train A --epochs 30 --limit 256 --name overfit_A
 
-# 6. Full runs: 4 arms x seeds 0-2, 30 epochs each, ~30 min per run. Logs in runs/<arm>_s<seed>/train.log.
+# 6. Full runs: 4 arms x seeds 0-2, 5 epochs each (~6 min per run). Logs in runs/<arm>_s<seed>/train.log.
+#    Long-schedule ablation (30 epochs, seed 0): EPOCHS=30 SEEDS=0 scripts/run_all.sh, then evaluate.py --tag _e30
 nohup scripts/run_all.sh > runs/run_all.log 2>&1 &
 
 # 7. Tables (NIH test with patient-level bootstrap CIs, held-out, paraphrases, IU-Xray, agreement) -> results/
@@ -62,7 +63,7 @@ uv run python scripts/figures.py --seed 0           # poster charts -> results/f
 uv run python scripts/qualitative.py --arm A        # t-SNE + Grad-CAM -> results/figures/
 ```
 
-One run: `uv run python -m discipulus.train {supervised,A,B,AB} --epochs 30 --seed 0`.
+One run: `uv run python -m discipulus.train {supervised,A,B,AB} --epochs 5 --seed 0`.
 
 ## Layout
 
@@ -82,5 +83,6 @@ scripts/             data prep, teacher cache, run_all, evaluation, figures
 - **NIH originals instead of MedMNIST+.** MedMNIST's chestmnist uses its own split and has no patient IDs, so a patient-disjoint split is impossible. We decode the original PNGs with CheXzero's own preprocessing: long side to 320 with LANCZOS, zero-pad, normalize, bicubic to 224. The stored 224 uint8 images give teacher embeddings with cosine >= 0.9999 to the exact float pipeline.
 - **IU-Xray from a Hugging Face mirror.** The Open-i download links return errors. Labels come from the MeSH terms; reports marked "No Indexing" are dropped, and only findings with at least 20 positives are reported.
 - **B uses the teacher's logit scale.** Its KL compares softmaxes of `exp(logit_scale) * cosine`. AUROC does not change, because the scale is monotone. Without it, the temperature-1 targets all sit near 0.5 and carry almost no signal.
+- **5 epochs for every arm.** 30 epochs made the supervised baseline memorize the training set (val AUROC 0.80 -> 0.70); see RESULTS.md section 5.
 - **No augmentation and no model selection.** Teacher targets are cached on unaugmented images, and every arm keeps its last epoch, so labels never pick a checkpoint.
 - **Checkpoint.** `best_64_5e-05_original_22000_0.864.pt`, one of the 10 released CheXzero checkpoints. We use this one alone, not the 10-model ensemble.
