@@ -151,7 +151,7 @@ def main() -> None:
     agree_t = pd.DataFrame(agree)
     agree_t.to_csv(OUT / f"agreement_s{seed}.csv", index=False)
 
-    torch.save(boots, OUT / f"boot_s{seed}.pt")
+    torch.save({"test": boots, "iu": boots_iu}, OUT / f"boot_s{seed}.pt")
     (OUT / f"metrics_s{seed}.json").write_text(json.dumps({
         "held_out": HELD_OUT, "iu_findings": [FINDINGS[i] for i in iu_f],
         "n_test": len(test_rows), "n_test_patients": int(splits.loc[test_rows, "patient"].nunique()),

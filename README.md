@@ -58,6 +58,7 @@ nohup scripts/run_all.sh > runs/run_all.log 2>&1 &
 # 7. Tables (NIH test with patient-level bootstrap CIs, held-out, paraphrases, IU-Xray, agreement) -> results/
 uv run python scripts/evaluate.py --seed 0
 uv run python scripts/efficiency.py                 # params, size, latency -> results/efficiency.csv
+uv run python scripts/figures.py --seed 0           # poster charts -> results/figures/
 uv run python scripts/qualitative.py --arm A        # t-SNE + Grad-CAM -> results/figures/
 ```
 
