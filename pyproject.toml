@@ -1,0 +1,38 @@
+[project]
+name = "discipulus"
+version = "0.1.0"
+description = "Distill CheXzero into a ResNet-18 student"
+authors = [
+    { name = "mohak34", email = "mohaks0408@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "gdown>=6.5.2",
+    "matplotlib>=3.11.2",
+    "medmnist>=3.0.2",
+    "open-clip-torch>=4.2.2",
+    "pandas>=3.1.1",
+    "scikit-learn>=1.9.1",
+    "torch>=2.15.0",
+    "torchvision>=0.29.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.21,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.6",
+    "ty>=0.0.108",
+]
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["src/discipulus/chexzero_model.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "C4"]
+
+[tool.ty.src]
+exclude = ["src/discipulus/chexzero_model.py"]
