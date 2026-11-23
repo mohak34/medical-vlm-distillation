@@ -1,0 +1,13 @@
+finding,positives,Teacher (CheXzero)
+Atelectasis,308,"0.809 [0.782, 0.834]"
+Cardiomegaly,331,"0.935 [0.923, 0.945]"
+Effusion,144,"0.941 [0.918, 0.960]"
+Infiltration,62,"0.840 [0.783, 0.890]"
+Nodule,106,"0.542 [0.486, 0.600]"
+Pneumonia,39,"0.851 [0.759, 0.930]"
+Pneumothorax,23,"0.790 [0.674, 0.885]"
+Consolidation,28,"0.921 [0.872, 0.961]"
+Edema,45,"0.941 [0.892, 0.970]"
+Emphysema,103,"0.885 [0.859, 0.907]"
+Pleural_Thickening,44,"0.712 [0.649, 0.786]"
+Hernia,48,"0.802 [0.752, 0.858]"
