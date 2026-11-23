@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
-# All arms, 30 epochs, seeds 0-2 (seed 0 for every arm first). Skips runs that already finished.
+# Every arm for seeds 0-2 (seed 0 for every arm first), same epoch budget for all. Skips finished runs.
+# Main budget is 5 epochs (runs/<arm>_s<seed>); EPOCHS=30 gives the long-schedule ablation (runs/<arm>_e30_s<seed>).
+# Usage: scripts/run_all.sh  |  EPOCHS=30 SEEDS=0 scripts/run_all.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
-for seed in 0 1 2; do
+EPOCHS=${EPOCHS:-5}
+TAG=$([ "$EPOCHS" = 5 ] && echo "" || echo "_e$EPOCHS")
+for seed in ${SEEDS:-0 1 2}; do
   for arm in supervised A B AB; do
-    [ -e "runs/${arm}_s${seed}/preds.pt" ] && continue
-    rm -rf "runs/${arm}_s${seed}"
-    uv run python -m discipulus.train "$arm" --epochs 30 --seed "$seed" > /dev/null
+    name="${arm}${TAG}_s${seed}"
+    [ -e "runs/$name/preds.pt" ] && continue
+    rm -rf "runs/$name"
+    uv run python -m discipulus.train "$arm" --epochs "$EPOCHS" --seed "$seed" --name "$name" > /dev/null
   done
 done
 echo ALL_DONE

@@ -1,7 +1,7 @@
 """All quantitative results: NIH test (per-finding, seen / held-out, retention, paraphrases), IU-Xray external,
 student-teacher agreement. Writes results/*.csv, results/metrics.json and figures, prints markdown tables.
 
-Usage: uv run python scripts/evaluate.py [--seed 0]
+Usage: uv run python scripts/evaluate.py [--seed 0] [--tag _e30]   (tag selects runs/<arm><tag>_s<seed>)
 """
 
 import argparse
@@ -44,7 +44,9 @@ def scores(arm: str, out: torch.Tensor, bank: torch.Tensor) -> np.ndarray:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--seed", type=int, default=0)
-    seed = p.parse_args().seed
+    p.add_argument("--tag", default="")
+    args = p.parse_args()
+    seed, tag = args.seed, args.tag
     OUT.mkdir(exist_ok=True)
 
     splits = load_splits()
@@ -63,7 +65,7 @@ def main() -> None:
     t_test = cache["emb"][test_rows].float()
     models["Teacher (CheXzero)"] = (scores("A", t_test, bank), scores("A", iu_teacher_emb(), bank), t_test)
     for arm, label in ARMS.items():
-        run = RUNS / f"{arm}_s{seed}"
+        run = RUNS / f"{arm}{tag}_s{seed}"
         if not (run / "preds.pt").exists():
             print(f"skip {label}: no {run}/preds.pt")
             continue
@@ -102,21 +104,21 @@ def main() -> None:
         r[f"IU-Xray macro AUROC ({len(iu_f)} findings)"] = fmt(point_iu[m].mean(), lo, hi)
         rows.append(r)
     main_t = pd.DataFrame(rows)
-    main_t.to_csv(OUT / f"main_s{seed}.csv", index=False)
+    main_t.to_csv(OUT / f"main{tag}_s{seed}.csv", index=False)
 
     # Per-finding AUROC with CIs on NIH test.
     per = pd.DataFrame({"finding": FINDINGS, "held out": [f in HELD_OUT for f in FINDINGS]})
     for m in models:
         lo, hi = ci(boots[m])
         per[m] = [fmt(point[m][i], lo[i], hi[i]) for i in range(14)]
-    per.to_csv(OUT / f"per_finding_s{seed}.csv", index=False)
+    per.to_csv(OUT / f"per_finding{tag}_s{seed}.csv", index=False)
 
     # Per-finding external.
     per_iu = pd.DataFrame({"finding": [FINDINGS[i] for i in iu_f], "positives": y_iu[:, iu_f].sum(0)})
     for m in models:
         lo, hi = ci(boots_iu[m])
         per_iu[m] = [fmt(point_iu[m][k], lo[k], hi[k]) for k in range(len(iu_f))]
-    per_iu.to_csv(OUT / f"per_finding_iu_s{seed}.csv", index=False)
+    per_iu.to_csv(OUT / f"per_finding_iu{tag}_s{seed}.csv", index=False)
 
     # Paraphrases: macro AUROC (all 14) per template, spread over the 5 withheld paraphrases + the training pair.
     para = []
@@ -130,7 +132,7 @@ def main() -> None:
         r["mean per-finding std"] = f"{a.std(0).mean():.3f}"
         para.append(r)
     para_t = pd.DataFrame(para)
-    para_t.to_csv(OUT / f"paraphrase_s{seed}.csv", index=False)
+    para_t.to_csv(OUT / f"paraphrase{tag}_s{seed}.csv", index=False)
 
     # Agreement with the teacher on NIH test (distilled students only).
     agree = []
@@ -149,10 +151,10 @@ def main() -> None:
             }
         )
     agree_t = pd.DataFrame(agree)
-    agree_t.to_csv(OUT / f"agreement_s{seed}.csv", index=False)
+    agree_t.to_csv(OUT / f"agreement{tag}_s{seed}.csv", index=False)
 
-    torch.save({"test": boots, "iu": boots_iu}, OUT / f"boot_s{seed}.pt")
-    (OUT / f"metrics_s{seed}.json").write_text(json.dumps({
+    torch.save({"test": boots, "iu": boots_iu}, OUT / f"boot{tag}_s{seed}.pt")
+    (OUT / f"metrics{tag}_s{seed}.json").write_text(json.dumps({
         "held_out": HELD_OUT, "iu_findings": [FINDINGS[i] for i in iu_f],
         "n_test": len(test_rows), "n_test_patients": int(splits.loc[test_rows, "patient"].nunique()),
         "n_iu": len(iu), "point": {m: v.tolist() for m, v in point.items()},
