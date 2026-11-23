@@ -143,12 +143,13 @@ def monitor(arm: Arm, model, rows: np.ndarray, t_emb, bank, labels) -> str:
     """Per-epoch numbers for the log only; never used to pick a checkpoint."""
     y = predict(model, rows)
     lab = labels[rows].cpu().numpy()
+    both = (lab.min(0) == 0) & (lab.max(0) == 1)  # AUROC is undefined for a finding with one class in `rows`
     if arm == "supervised":
-        return f"val macro AUROC {auroc_table(lab, y.sigmoid().numpy()).mean():.4f}"
+        return f"val macro AUROC {auroc_table(lab[:, both], y.sigmoid().numpy()[:, both]).mean():.4f}"
     cos = F.cosine_similarity(y.cuda(), t_emb[rows], dim=-1).mean().item()
     p_s = prompt_probs(y.cuda(), bank)[:, 0].cpu().numpy()
     p_t = prompt_probs(t_emb[rows], bank)[:, 0].cpu().numpy()
-    a = auroc_table(lab, p_s).mean() if lab.min(0).max() == 0 and lab.max(0).min() == 1 else float("nan")
+    a = auroc_table(lab[:, both], p_s[:, both]).mean()
     corr = np.mean([np.corrcoef(p_s[:, f], p_t[:, f])[0, 1] for f in range(p_s.shape[1])])
     return f"val cos-to-teacher {cos:.4f}, score corr {corr:.4f}, macro AUROC {a:.4f}"
 
