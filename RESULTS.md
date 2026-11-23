@@ -105,6 +105,20 @@ Agreement with the teacher on NIH test (`results/agreement_s0.csv`):
 | B | 0.186 | 0.963 | 0.678 |
 | A+B | 0.976 | 0.966 | 0.953 |
 
+## 6b. Across seeds 0-2
+
+Run `uv run python scripts/evaluate.py --seed {0,1,2}`, then `uv run python scripts/seeds.py`, which writes `results/seeds.csv`. Values are mean +- std of the point macro AUROC over 3 training seeds. The teacher is fixed, so its std is 0.
+
+| model | NIH all 14 | seen (10) | held-out (4) | IU-Xray (12) |
+|---|---|---|---|---|
+| Teacher (CheXzero) | 0.653 | 0.643 | 0.679 | 0.831 |
+| Supervised | 0.760 +- 0.002 | 0.737 +- 0.002 | 0.818 +- 0.004 | 0.765 +- 0.004 |
+| A: embedding | 0.652 +- 0.001 | 0.641 +- 0.001 | 0.679 +- 0.001 | 0.831 +- 0.002 |
+| B: score | 0.617 +- 0.002 | 0.642 +- 0.001 | 0.557 +- 0.009 | 0.796 +- 0.001 |
+| A+B | 0.652 +- 0.000 | 0.642 +- 0.001 | 0.675 +- 0.001 | 0.828 +- 0.000 |
+
+Seed variation is far smaller than the gaps between arms, so every seed-0 conclusion above holds.
+
 ## 7. Prompt paraphrases (NIH test, macro AUROC over 14, seed 0)
 
 `results/paraphrase_s0.csv`. The training pair is `"{}"` / `"no {}"`, and the other 5 pairs were never used in training.
