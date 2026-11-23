@@ -1,7 +1,8 @@
 """Poster figures: t-SNE of teacher and student embeddings, and Grad-CAM where teacher and student disagree.
 
 Grad-CAM target for both models is the same prompt-score logit, cos(z, "finding") - cos(z, "no finding").
-Student layer: ResNet-18 layer4 (7x7). Teacher layer: last ViT block tokens without CLS (7x7 patches).
+Student layer: ResNet-18 layer4 (7x7). Teacher layer: tokens entering the last ViT block, without CLS (7x7 patches).
+After the last block only CLS reaches the output, so its patch tokens have zero gradient.
 Usage: uv run python scripts/qualitative.py [--arm A] [--seed 0]
 """
 
@@ -19,7 +20,7 @@ from discipulus.teacher import load_cache, load_teacher, prompt_probs
 from discipulus.train import RUNS
 
 OUT = ROOT / "results" / "figures"
-GROUPS = ["No Finding", "Effusion", "Cardiomegaly", "Infiltration"]
+GROUPS = {"No Finding": "#2a78d6", "Effusion": "#eb6834", "Cardiomegaly": "#1baf7a", "Infiltration": "#eda100"}
 
 
 def tsne_figure(seed: int, splits, cache) -> None:
@@ -30,7 +31,7 @@ def tsne_figure(seed: int, splits, cache) -> None:
     # one colour per image: first matching group, single-label images only so colours are unambiguous
     group = np.full(len(pick), -1)
     group[lab.sum(1) == 0] = 0
-    for g, f in enumerate(GROUPS[1:], start=1):
+    for g, f in enumerate(list(GROUPS)[1:], start=1):
         group[(lab[:, FINDINGS.index(f)] == 1) & (lab.sum(1) == 1)] = g
     embs = {"Teacher": cache["emb"][test[pick]].float()}
     for arm, name in (("A", "A: embedding"), ("B", "B: score"), ("AB", "A+B")):
@@ -41,9 +42,9 @@ def tsne_figure(seed: int, splits, cache) -> None:
     for ax, (name, e) in zip(np.atleast_1d(axes), embs.items(), strict=True):
         xy = TSNE(init="pca", random_state=0, perplexity=40).fit_transform(F.normalize(e, dim=-1).numpy())
         ax.scatter(xy[group == -1, 0], xy[group == -1, 1], s=2, c="#cccccc", label="other / multi-label")
-        for g, gname in enumerate(GROUPS):
+        for g, (gname, color) in enumerate(GROUPS.items()):
             m = group == g
-            ax.scatter(xy[m, 0], xy[m, 1], s=3, label=gname)
+            ax.scatter(xy[m, 0], xy[m, 1], s=3, c=color, label=gname)
         ax.set_title(name)
         ax.set_xticks([])
         ax.set_yticks([])
@@ -68,7 +69,8 @@ def gradcam_figure(arm: str, seed: int, splits, cache, n: int = 4) -> None:
     p_t = prompt_probs(cache["emb"][test].float().cuda(), bank)[:, 0].cpu().numpy()
     # disagreement on the rank scale, positives only, for the finding where the two disagree most
     rank = lambda p: p.argsort(0).argsort(0) / len(p)  # noqa: E731
-    gap = np.abs(rank(p_s) - rank(p_t))
+    r_s, r_t = rank(p_s), rank(p_t)
+    gap = np.abs(r_s - r_t)
     labels = splits.loc[test, FINDINGS].to_numpy()
     f = int((gap * labels).sum(0).argmax())
     cand = np.flatnonzero(labels[:, f] == 1)
@@ -84,7 +86,7 @@ def gradcam_figure(arm: str, seed: int, splits, cache, n: int = 4) -> None:
     for r, i in enumerate(chosen):
         x = normalize(torch.from_numpy(np.array(store[test[i]]))[None].cuda()).requires_grad_(False)
         maps = []
-        layers = (teacher.get_submodule("visual.transformer.resblocks.11"), student.get_submodule("layer4"))
+        layers = (teacher.get_submodule("visual.transformer.resblocks.10"), student.get_submodule("layer4"))
         for model, layer in zip((teacher, student), layers, strict=True):
             saved: dict[str, torch.Tensor] = {}
             h = layer.register_forward_hook(lambda _m, _i, o, saved=saved: saved.__setitem__("a", o))
@@ -100,7 +102,7 @@ def gradcam_figure(arm: str, seed: int, splits, cache, n: int = 4) -> None:
             maps.append(gradcam(a.float(), g.float()))
         img = np.array(store[test[i]])
         axes[r, 0].imshow(img, cmap="gray")
-        axes[r, 0].set_title(f"{FINDINGS[f]} +  T {p_t[i, f]:.3f} / S {p_s[i, f]:.3f}", fontsize=7)
+        axes[r, 0].set_title(f"{FINDINGS[f]} +, percentile T {r_t[i, f]:.2f} / S {r_s[i, f]:.2f}", fontsize=7)
         for c, (title, m) in enumerate((("Teacher Grad-CAM", maps[0]), (f"Student {arm} Grad-CAM", maps[1])), 1):
             axes[r, c].imshow(img, cmap="gray")
             axes[r, c].imshow(m, cmap="jet", alpha=0.4)
