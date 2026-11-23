@@ -62,4 +62,4 @@ def load_cache() -> dict[str, torch.Tensor]:
 
 
 # Findings arm B never trains on. Chosen from teacher validation AUROC (>= 0.65) before any student run.
-HELD_OUT: list[str] = []
+HELD_OUT: list[str] = ["Cardiomegaly", "Pneumothorax", "Emphysema", "Mass"]
