@@ -14,6 +14,8 @@ DATA = ROOT / "data"
 NIH_RAW = DATA / "raw" / "nih"
 IMAGES_NPY = DATA / "nih_224.npy"
 SPLITS_CSV = DATA / "splits.csv"
+IU_NPY = DATA / "iu_224.npy"
+IU_CSV = DATA / "iu_labels.csv"
 
 # NIH label names (column order everywhere) and the words used in prompts.
 FINDINGS = [
@@ -123,15 +125,16 @@ def load_splits() -> pd.DataFrame:
     return df
 
 
-def open_images() -> np.ndarray:
-    return np.load(IMAGES_NPY, mmap_mode="r")
+def open_images(path: Path = IMAGES_NPY) -> np.ndarray:
+    return np.load(path, mmap_mode="r")
 
 
 class CXR(Dataset):
     """Rows of the image store. Returns (uint8 image, row); targets are gathered on the GPU by row."""
 
-    def __init__(self, rows: np.ndarray):
+    def __init__(self, rows: np.ndarray, store: Path = IMAGES_NPY):
         self.rows = rows
+        self.store = store
         self.images: np.ndarray | None = None
 
     def __len__(self) -> int:
@@ -139,6 +142,6 @@ class CXR(Dataset):
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, int]:
         if self.images is None:  # open the memmap lazily so each worker gets its own handle
-            self.images = open_images()
+            self.images = open_images(self.store)
         j = int(self.rows[index])
         return torch.from_numpy(np.array(self.images[j])), j

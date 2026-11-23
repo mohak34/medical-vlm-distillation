@@ -12,7 +12,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from discipulus.data import CXR, FINDINGS, ROOT, load_splits, normalize
+from discipulus.data import CXR, FINDINGS, IMAGES_NPY, ROOT, load_splits, normalize
 from discipulus.evaluate import auroc_table
 from discipulus.student import embedding_loss, make_student, score_loss
 from discipulus.teacher import HELD_OUT, load_cache, prompt_probs
@@ -28,10 +28,10 @@ def seen_mask() -> torch.Tensor:
 
 
 @torch.no_grad()
-def predict(model: torch.nn.Module, rows: np.ndarray, batch: int = 512) -> torch.Tensor:
+def predict(model: torch.nn.Module, rows: np.ndarray, store: Path = IMAGES_NPY, batch: int = 512) -> torch.Tensor:
     """Raw head outputs (logits or embeddings), float32, in the order of `rows`."""
     model.eval()
-    loader = DataLoader(CXR(rows), batch_size=batch, num_workers=8, pin_memory=True)
+    loader = DataLoader(CXR(rows, store), batch_size=batch, num_workers=8, pin_memory=True)
     out = []
     for x, _ in loader:
         with torch.autocast("cuda", dtype=torch.bfloat16):
