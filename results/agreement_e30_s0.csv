@@ -1,0 +1,4 @@
+model,cosine to teacher emb (mean),score corr (seen),score corr (held-out)
+A: embedding,0.983,0.967,0.963
+B: score,0.200,0.964,0.699
+A+B,0.982,0.968,0.961

@@ -88,7 +88,7 @@ Every arm trains for **5 epochs** (OneCycle, last epoch kept). The first plan wa
 
 What it shows:
 
-- **A keeps essentially all of the teacher**, on seen findings, held-out findings and the external set alike, with 11x fewer image-encoder parameters (section 9).
+- **A keeps essentially all of the teacher**, on seen findings, held-out findings and the external set alike, with 7.7x fewer image-encoder parameters and 4x lower latency (section 9).
 - **B matches the teacher only where it was trained.** On held-out findings it drops from 0.679 to 0.563. Emphysema goes to 0.480, below chance. On IU-Xray, held-out Cardiomegaly falls from 0.935 to 0.838 and Emphysema from 0.885 to 0.657, while seen findings stay at the teacher's level.
 - **A+B is the same as A within the CIs.** Adding B neither helps nor hurts.
 - **Supervised beats the teacher on NIH but loses on IU-Xray**: 0.759 vs 0.831 for the teacher and 0.833 for A. It learns NIH's own labels, including Hernia, Fibrosis and Nodule, where the teacher is near chance, but those labels transfer worse. Its "held-out" column is not held out, since it trains on all 14 labels.
@@ -143,4 +143,28 @@ A and A+B carry the teacher's prompt sensitivity over unchanged, including its w
 
 ## 9. Efficiency
 
-`uv run python scripts/efficiency.py` will run once training frees the GPU.
+`uv run python scripts/efficiency.py` writes `results/efficiency.csv`. Image encoder only, fp32, RTX 3080 Laptop, 8 CPU threads:
+
+| model | params (M) | fp32 size (MB) | GPU ms/img, batch 1 | GPU ms/img, batch 64 | CPU ms/img, batch 1 |
+|---|---:|---:|---:|---:|---:|
+| Teacher image encoder (ViT-B/32) | 87.8 | 335 | 3.68 | 1.68 | 55.3 |
+| Student (ResNet-18 + 512-d proj) | 11.4 | 44 | 1.63 | 0.42 | 14.2 |
+
+The student has 7.7x fewer parameters. It runs 4.0x faster on GPU at batch 64 and 3.9x faster on CPU. Text embeddings are cached, so at inference there is no text encoder.
+
+## 10. Ablation: 30 epochs instead of 5 (seed 0)
+
+`EPOCHS=30 SEEDS=0 scripts/run_all.sh`, then `uv run python scripts/evaluate.py --seed 0 --tag _e30`. Outputs are `results/*_e30_s0.*`.
+
+| model | NIH all 14 | seen (10) | held-out (4) | IU-Xray (12) |
+|---|---|---|---|---|
+| Teacher (CheXzero) | 0.653 [0.643, 0.662] | 0.643 [0.631, 0.654] | 0.679 [0.665, 0.694] | 0.831 [0.814, 0.846] |
+| Supervised | 0.700 [0.691, 0.709] | 0.672 [0.660, 0.683] | 0.770 [0.758, 0.780] | 0.681 [0.655, 0.705] |
+| A: embedding | 0.652 [0.642, 0.661] | 0.642 [0.630, 0.653] | 0.676 [0.661, 0.690] | 0.832 [0.816, 0.849] |
+| B: score | 0.619 [0.609, 0.629] | 0.642 [0.630, 0.653] | 0.563 [0.546, 0.579] | 0.800 [0.783, 0.817] |
+| A+B | 0.653 [0.642, 0.661] | 0.642 [0.630, 0.653] | 0.679 [0.665, 0.693] | 0.832 [0.816, 0.848] |
+
+- 6x the training does not change any distilled arm. Every number is within 0.004 of the 5-epoch run.
+- Supervised loses 0.06 on NIH test (0.760 -> 0.700) and 0.08 on IU-Xray (0.759 -> 0.681). The teacher's soft targets keep the distilled arms from overfitting; hard labels do not.
+- B's held-out gap is the same at 30 epochs (0.563). It comes from the loss, not from the training length.
+- Cosine to the teacher embedding: A 0.983, B 0.200, A+B 0.982. Score corr held-out: A 0.963, B 0.699, A+B 0.961.
