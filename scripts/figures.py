@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from discipulus.data import FINDINGS, ROOT
+from medical_vlm_distillation.data import FINDINGS, ROOT
 
 RES = ROOT / "results"
 OUT = RES / "figures"

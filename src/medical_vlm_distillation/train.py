@@ -12,10 +12,10 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from discipulus.data import CXR, FINDINGS, IMAGES_NPY, ROOT, load_splits, normalize
-from discipulus.evaluate import auroc_table
-from discipulus.student import embedding_loss, make_student, score_loss
-from discipulus.teacher import HELD_OUT, load_cache, prompt_probs
+from medical_vlm_distillation.data import CXR, FINDINGS, IMAGES_NPY, ROOT, load_splits, normalize
+from medical_vlm_distillation.evaluate import auroc_table
+from medical_vlm_distillation.student import embedding_loss, make_student, score_loss
+from medical_vlm_distillation.teacher import HELD_OUT, load_cache, prompt_probs
 
 Arm = Literal["supervised", "A", "B", "AB"]
 ARMS: tuple[Arm, ...] = ("supervised", "A", "B", "AB")

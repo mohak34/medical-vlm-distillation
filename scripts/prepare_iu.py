@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
-from discipulus.data import DATA, FINDINGS, RES, png_to_224
+from medical_vlm_distillation.data import DATA, FINDINGS, RES, png_to_224
 
 RAW = DATA / "raw" / "iu"
 MIRROR = "https://huggingface.co/datasets/sasi2004/chest-xrays-indiana-university/resolve/main/images/images_normalized"

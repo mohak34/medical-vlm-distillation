@@ -10,8 +10,16 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 
-from discipulus.data import CXR_MEAN, CXR_STD, NIH_RAW, chexzero_pad, load_metadata, open_images, resize_224
-from discipulus.teacher import encode_images, load_teacher
+from medical_vlm_distillation.data import (
+    CXR_MEAN,
+    CXR_STD,
+    NIH_RAW,
+    chexzero_pad,
+    load_metadata,
+    open_images,
+    resize_224,
+)
+from medical_vlm_distillation.teacher import encode_images, load_teacher
 
 N = 256
 

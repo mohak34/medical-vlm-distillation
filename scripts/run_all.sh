@@ -11,7 +11,7 @@ for seed in ${SEEDS:-0 1 2}; do
     name="${arm}${TAG}_s${seed}"
     [ -e "runs/$name/preds.pt" ] && continue
     rm -rf "runs/$name"
-    uv run python -m discipulus.train "$arm" --epochs "$EPOCHS" --seed "$seed" --name "$name" > /dev/null
+    uv run python -m medical_vlm_distillation.train "$arm" --epochs "$EPOCHS" --seed "$seed" --name "$name" > /dev/null
   done
 done
 echo ALL_DONE

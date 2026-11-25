@@ -6,8 +6,8 @@ import open_clip
 import torch
 import torch.nn.functional as F
 
-from discipulus.chexzero_model import CLIP, build_model
-from discipulus.data import DATA, FINDINGS, PROMPT_NAMES, ROOT, normalize
+from medical_vlm_distillation.chexzero_model import CLIP, build_model
+from medical_vlm_distillation.data import DATA, FINDINGS, PROMPT_NAMES, ROOT, normalize
 
 CKPT_DIR = ROOT / "checkpoints" / "CheXzero_Models"
 # Pinned: highest validation score of the authors' released checkpoints (0.864, tied; first by name).

@@ -1,5 +1,5 @@
 [project]
-name = "discipulus"
+name = "medical-vlm-distillation"
 version = "0.1.0"
 description = "Distill CheXzero into a ResNet-18 student"
 authors = [
@@ -30,10 +30,10 @@ dev = [
 
 [tool.ruff]
 line-length = 120
-extend-exclude = ["src/discipulus/chexzero_model.py"]
+extend-exclude = ["src/medical_vlm_distillation/chexzero_model.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "C4"]
 
 [tool.ty.src]
-exclude = ["src/discipulus/chexzero_model.py"]
+exclude = ["src/medical_vlm_distillation/chexzero_model.py"]

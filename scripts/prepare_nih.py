@@ -11,7 +11,16 @@ from multiprocessing import Pool
 import numpy as np
 from PIL import Image
 
-from discipulus.data import DATA, IMAGES_NPY, NIH_RAW, RES, SPLITS_CSV, load_metadata, make_splits, png_to_224
+from medical_vlm_distillation.data import (
+    DATA,
+    IMAGES_NPY,
+    NIH_RAW,
+    RES,
+    SPLITS_CSV,
+    load_metadata,
+    make_splits,
+    png_to_224,
+)
 
 DONE_LIST = DATA / "prepared_zips.txt"
 _zips: dict[str, zipfile.ZipFile] = {}

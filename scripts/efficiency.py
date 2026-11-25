@@ -7,9 +7,9 @@ import pandas as pd
 import torch
 from torch import nn
 
-from discipulus.data import ROOT
-from discipulus.student import make_student
-from discipulus.teacher import load_teacher
+from medical_vlm_distillation.data import ROOT
+from medical_vlm_distillation.student import make_student
+from medical_vlm_distillation.teacher import load_teacher
 
 
 @torch.no_grad()

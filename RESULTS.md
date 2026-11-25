@@ -46,7 +46,7 @@ Val macro AUROC for the other prompt pairs: 0.705, 0.699, 0.664, 0.704 and 0.707
 
 ## 4. Overfit checks (256 training images, 30 epochs)
 
-`uv run python -m discipulus.train {arm} --epochs 30 --limit 256 --name overfit_{arm}`
+`uv run python -m medical_vlm_distillation.train {arm} --epochs 30 --limit 256 --name overfit_{arm}`
 
 | arm | train loss, epoch 0 -> 29 | fit on those 256 images |
 |---|---|---|

@@ -5,9 +5,17 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from discipulus.data import CXR, FINDINGS, load_splits
-from discipulus.evaluate import auroc_table
-from discipulus.teacher import CACHE, CKPT, TEMPLATES, encode_images, load_teacher, prompt_probs, text_bank
+from medical_vlm_distillation.data import CXR, FINDINGS, load_splits
+from medical_vlm_distillation.evaluate import auroc_table
+from medical_vlm_distillation.teacher import (
+    CACHE,
+    CKPT,
+    TEMPLATES,
+    encode_images,
+    load_teacher,
+    prompt_probs,
+    text_bank,
+)
 
 
 def main() -> None:

@@ -14,10 +14,10 @@ import torch
 import torch.nn.functional as F
 from sklearn.manifold import TSNE
 
-from discipulus.data import FINDINGS, ROOT, load_splits, normalize, open_images
-from discipulus.student import make_student
-from discipulus.teacher import load_cache, load_teacher, prompt_probs
-from discipulus.train import RUNS
+from medical_vlm_distillation.data import FINDINGS, ROOT, load_splits, normalize, open_images
+from medical_vlm_distillation.student import make_student
+from medical_vlm_distillation.teacher import load_cache, load_teacher, prompt_probs
+from medical_vlm_distillation.train import RUNS
 
 OUT = ROOT / "results" / "figures"
 GROUPS = {"No Finding": "#2a78d6", "Effusion": "#eb6834", "Cardiomegaly": "#1baf7a", "Infiltration": "#eda100"}

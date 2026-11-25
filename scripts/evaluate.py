@@ -13,11 +13,19 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 
-from discipulus.data import FINDINGS, IU_CSV, IU_NPY, ROOT, load_splits
-from discipulus.evaluate import auroc_table, boot_auroc, boot_weights, ci
-from discipulus.student import make_student
-from discipulus.teacher import CACHE, HELD_OUT, TEMPLATES, encode_images, load_cache, load_teacher, prompt_probs
-from discipulus.train import RUNS, predict
+from medical_vlm_distillation.data import FINDINGS, IU_CSV, IU_NPY, ROOT, load_splits
+from medical_vlm_distillation.evaluate import auroc_table, boot_auroc, boot_weights, ci
+from medical_vlm_distillation.student import make_student
+from medical_vlm_distillation.teacher import (
+    CACHE,
+    HELD_OUT,
+    TEMPLATES,
+    encode_images,
+    load_cache,
+    load_teacher,
+    prompt_probs,
+)
+from medical_vlm_distillation.train import RUNS, predict
 
 OUT = ROOT / "results"
 ARMS = {"supervised": "Supervised", "A": "A: embedding", "B": "B: score", "AB": "A+B"}

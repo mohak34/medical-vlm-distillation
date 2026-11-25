@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch import nn
 from torchvision.models import ResNet18_Weights, resnet18
 
-from discipulus.teacher import prompt_logits
+from medical_vlm_distillation.teacher import prompt_logits
 
 
 def make_student(out_dim: int) -> nn.Module:

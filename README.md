@@ -43,7 +43,7 @@ Arms. All of them share architecture, init, data, epochs, optimizer and schedule
 
 Generalization tests were fixed before training:
 
-- 4 held-out findings that B never trains on. A uses no findings at all, so nothing is held out from it (`HELD_OUT` in `src/discipulus/teacher.py`).
+- 4 held-out findings that B never trains on. A uses no findings at all, so nothing is held out from it (`HELD_OUT` in `src/medical_vlm_distillation/teacher.py`).
 - 5 withheld prompt paraphrases (`TEMPLATES[1:]`).
 - IU-Xray as the external set.
 
@@ -76,7 +76,7 @@ uv run python scripts/prepare_iu.py
 uv run python scripts/cache_teacher.py
 
 # 5. Overfit check (any arm): 256 training images, 30 epochs, loss should go to ~0.
-uv run python -m discipulus.train A --epochs 30 --limit 256 --name overfit_A
+uv run python -m medical_vlm_distillation.train A --epochs 30 --limit 256 --name overfit_A
 
 # 6. Full runs: 4 arms x seeds 0-2, 5 epochs each (~6 min per run). Logs in runs/<arm>_s<seed>/train.log.
 #    Long-schedule ablation (30 epochs, seed 0): EPOCHS=30 SEEDS=0 scripts/run_all.sh, then evaluate.py --tag _e30
@@ -89,12 +89,12 @@ uv run python scripts/figures.py --seed 0           # poster charts -> results/f
 uv run python scripts/qualitative.py --arm A        # t-SNE + Grad-CAM -> results/figures/
 ```
 
-One run: `uv run python -m discipulus.train {supervised,A,B,AB} --epochs 5 --seed 0`.
+One run: `uv run python -m medical_vlm_distillation.train {supervised,A,B,AB} --epochs 5 --seed 0`.
 
 ## Layout
 
 ```
-src/discipulus/
+src/medical_vlm_distillation/
   data.py            NIH metadata, patient split, CheXzero preprocessing, image-store Dataset
   teacher.py         CheXzero loading, prompt templates, text bank, held-out findings, cache
   chexzero_model.py  CheXzero's model.py, vendored unmodified (MIT)
@@ -115,7 +115,7 @@ scripts/             data prep, teacher cache, run_all, evaluation, figures
 
 ## Credits
 
-- [CheXzero](https://github.com/rajpurkarlab/CheXzero) (Tiu et al., 2022): the teacher. `src/discipulus/chexzero_model.py` is vendored under its MIT license.
+- [CheXzero](https://github.com/rajpurkarlab/CheXzero) (Tiu et al., 2022): the teacher. `src/medical_vlm_distillation/chexzero_model.py` is vendored under its MIT license.
 - [NIH ChestX-ray14](https://nihcc.app.box.com/v/ChestXray-NIHCC) (Wang et al., 2017): training and test images.
 - IU-Xray / Open-i (Demner-Fushman et al., 2016): external test set.
 
