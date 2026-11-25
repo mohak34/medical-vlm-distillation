@@ -4,3 +4,4 @@ data/
 checkpoints/
 runs/
 results/*.pt
+docs/
