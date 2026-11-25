@@ -39,7 +39,7 @@ Every number below comes with the command that produced it. AUROC CIs are 95% pa
 
 Val macro AUROC for the other prompt pairs: 0.705, 0.699, 0.664, 0.704 and 0.707.
 
-**Held-out findings** (fixed in commit c5f50b5, before any student run): Cardiomegaly, Pneumothorax, Emphysema, Mass.
+**Held-out findings** (fixed in commit a657f10, before any student run): Cardiomegaly, Pneumothorax, Emphysema, Mass.
 
 - The rule was teacher val AUROC >= 0.65 and four different kinds of finding: heart size, pleural air, diffuse lung damage, and a focal lesion.
 - Three of the four are also scored on IU-Xray.
