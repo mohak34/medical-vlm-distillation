@@ -1,6 +1,34 @@
-# discipulus
+# What Survives Compression? Distilling a Medical Vision-Language Model into a Lightweight CNN
 
-COMPSCI 682 final project: *What Survives Compression? Distilling a Medical Vision-Language Model into a Lightweight CNN.*
+COMPSCI 682 final project, UMass Amherst, Fall 2026.
+Chirag Aparadh, Gautham Mallipeddi, Mohak Subramanya Murthy.
+
+Medical vision-language models can score a chest X-ray for any finding you can write as a text prompt, but their image encoders are large. We distill one (CheXzero) into a ResNet-18 using only unlabeled images, and test which of the teacher's abilities the small model keeps.
+
+## Results
+
+Macro AUROC (0.5 is chance), mean over 3 training seeds. Confidence intervals, per-finding tables and the command behind every number are in [RESULTS.md](RESULTS.md).
+
+| model | NIH all 14 | NIH seen (10) | NIH held-out (4) | IU-Xray (12) |
+|---|---:|---:|---:|---:|
+| Teacher (CheXzero) | 0.653 | 0.643 | 0.679 | 0.831 |
+| Supervised ResNet-18 | 0.760 | 0.737 | 0.818 (trained on these) | 0.765 |
+| A: embedding matching | 0.652 | 0.641 | 0.679 | 0.831 |
+| B: score matching | 0.617 | 0.642 | 0.557 | 0.796 |
+| A+B | 0.652 | 0.642 | 0.675 | 0.828 |
+
+![Macro AUROC by finding group, seed 0, with 95% patient-bootstrap intervals](results/figures/macro_auroc_s0.png)
+
+- **Embedding matching keeps the teacher's performance** on NIH and on IU-Xray, with 11.4M image-encoder parameters instead of 87.8M, and 3.9x lower CPU latency.
+- **Score matching keeps only the findings it trained on.** It falls to 0.557 on the held-out ones.
+- **Adding score matching to embedding matching changes little**: at most 0.004.
+- **The supervised model is better on NIH and worse on IU-Xray.** It uses the NIH labels; the distilled students never do.
+
+Limits: one teacher checkpoint, one student architecture, and NIH labels mined from reports by text processing. The supervised baseline overfits after about 3 epochs and no checkpoint selection is used, so it is somewhat understated.
+
+This is a research project. It is not for clinical use.
+
+## Method
 
 The teacher is CheXzero (a CLIP ViT-B/32 trained on MIMIC-CXR reports), kept frozen. The student is an ImageNet ResNet-18 whose last layer maps to CheXzero's 512-d embedding space. The student trains on NIH ChestX-ray14 images using only the teacher's outputs. At test time its embedding is scored against cached CheXzero text embeddings of a `"{finding}"` / `"no {finding}"` prompt pair, with a softmax over the pair, exactly like the teacher.
 
@@ -15,11 +43,9 @@ Arms. All of them share architecture, init, data, epochs, optimizer and schedule
 
 Generalization tests were fixed before training:
 
-- 4 held-out findings that B never trains on (`HELD_OUT` in `src/discipulus/teacher.py`).
+- 4 held-out findings that B never trains on. A uses no findings at all, so nothing is held out from it (`HELD_OUT` in `src/discipulus/teacher.py`).
 - 5 withheld prompt paraphrases (`TEMPLATES[1:]`).
 - IU-Xray as the external set.
-
-All results go in [RESULTS.md](RESULTS.md).
 
 ## Setup
 
@@ -86,3 +112,11 @@ scripts/             data prep, teacher cache, run_all, evaluation, figures
 - **5 epochs for every arm.** 30 epochs made the supervised baseline memorize the training set (val AUROC 0.80 -> 0.70); see RESULTS.md section 5.
 - **No augmentation and no model selection.** Teacher targets are cached on unaugmented images, and every arm keeps its last epoch, so labels never pick a checkpoint.
 - **Checkpoint.** `best_64_5e-05_original_22000_0.864.pt`, one of the 10 released CheXzero checkpoints. We use this one alone, not the 10-model ensemble.
+
+## Credits
+
+- [CheXzero](https://github.com/rajpurkarlab/CheXzero) (Tiu et al., 2022): the teacher. `src/discipulus/chexzero_model.py` is vendored under its MIT license.
+- [NIH ChestX-ray14](https://nihcc.app.box.com/v/ChestXray-NIHCC) (Wang et al., 2017): training and test images.
+- IU-Xray / Open-i (Demner-Fushman et al., 2016): external test set.
+
+Datasets and checkpoints are not in this repo; `scripts/download.sh` fetches them.

@@ -1,6 +1,6 @@
 # Results
 
-Every number below comes with the command that produced it. AUROC CIs are 95% patient-level bootstrap intervals (1000 resamples, same resamples for every model, so the comparisons are paired). The student tables fill in as runs finish.
+Every number below comes with the command that produced it. AUROC CIs are 95% patient-level bootstrap intervals (1000 resamples, same resamples for every model, so the comparisons are paired).
 
 ## 1. Data and split audit
 
@@ -63,6 +63,8 @@ Every arm trains for **5 epochs** (OneCycle, last epoch kept). The first plan wa
 - Train loss fell from 0.25 to 0.0000.
 - Val macro AUROC peaked at 0.799 in epoch 2, then fell to 0.704 by epoch 30.
 
+The 5-epoch supervised run still peaks early (0.809 in epoch 3, 0.779 at the end). The last epoch is kept for every arm, so the supervised baseline is somewhat understated.
+
 5 epochs was chosen from that val curve alone, before any distillation run, and it applies to every arm. The 30-epoch runs are kept as an ablation (`runs/<arm>_e30_s0`, `EPOCHS=30 SEEDS=0 scripts/run_all.sh`).
 
 5-epoch val curves (`runs/<arm>_s0/train.log`):
@@ -88,10 +90,10 @@ Every arm trains for **5 epochs** (OneCycle, last epoch kept). The first plan wa
 
 What it shows:
 
-- **A keeps essentially all of the teacher**, on seen findings, held-out findings and the external set alike, with 7.7x fewer image-encoder parameters and 4x lower latency (section 9).
+- **A keeps essentially all of the teacher**, on seen findings, held-out findings and the external set alike, with 7.7x fewer image-encoder parameters and 2.3x to 4x lower latency, depending on device and batch size (section 9). A's loss never uses the findings or prompts, so no finding is seen or held out for A; the split only matters for B and A+B.
 - **B matches the teacher only where it was trained.** On held-out findings it drops from 0.679 to 0.563. Emphysema goes to 0.480, below chance. On IU-Xray, held-out Cardiomegaly falls from 0.935 to 0.838 and Emphysema from 0.885 to 0.657, while seen findings stay at the teacher's level.
 - **A+B is the same as A within the CIs.** Adding B neither helps nor hurts.
-- **Supervised beats the teacher on NIH but loses on IU-Xray**: 0.759 vs 0.831 for the teacher and 0.833 for A. It learns NIH's own labels, including Hernia, Fibrosis and Nodule, where the teacher is near chance, but those labels transfer worse. Its "held-out" column is not held out, since it trains on all 14 labels.
+- **Supervised beats the teacher on NIH but loses on IU-Xray**: 0.759 vs 0.831 for the teacher and 0.833 for A. It learns NIH's own labels, including Hernia, Fibrosis and Nodule, where the teacher is near chance, and it transfers worse here. It is also partly overfit at epoch 5 (section 5), so this gap is not only about labels. Its "held-out" column is not held out, since it trains on all 14 labels.
 - **The teacher is lower on the official test list (0.653) than on val (0.701).** The same preprocessing feeds both splits, and the val number matches the published one. The biggest drops are Emphysema (0.740 -> 0.579) and Mass (0.698 -> 0.570), both held out, so the held-out set is harder on test than its val AUROC suggested.
 - IU-Xray uses 12 findings. Mass (17 positives) and Fibrosis (18) fall under the 20-positive minimum.
 
@@ -117,7 +119,7 @@ Run `uv run python scripts/evaluate.py --seed {0,1,2}`, then `uv run python scri
 | B: score | 0.617 +- 0.002 | 0.642 +- 0.001 | 0.557 +- 0.009 | 0.796 +- 0.001 |
 | A+B | 0.652 +- 0.000 | 0.642 +- 0.001 | 0.675 +- 0.001 | 0.828 +- 0.000 |
 
-Seed variation is far smaller than the gaps between arms, so every seed-0 conclusion above holds.
+Seed std is at most 0.009, far below the gaps between the teacher, supervised and B. The largest seed effect is B on held-out findings: 0.563, 0.564 and 0.544. Single findings move more (B on Pneumothorax: 0.637, 0.571, 0.548). A and A+B differ by at most 0.004, too little to rank them.
 
 ## 7. Prompt paraphrases (NIH test, macro AUROC over 14, seed 0)
 
@@ -150,7 +152,7 @@ A and A+B carry the teacher's prompt sensitivity over unchanged, including its w
 | Teacher image encoder (ViT-B/32) | 87.8 | 335 | 3.68 | 1.68 | 55.3 |
 | Student (ResNet-18 + 512-d proj) | 11.4 | 44 | 1.63 | 0.42 | 14.2 |
 
-The student has 7.7x fewer parameters. It runs 4.0x faster on GPU at batch 64 and 3.9x faster on CPU. Text embeddings are cached, so at inference there is no text encoder.
+The student has 7.7x fewer parameters. It runs 2.3x faster on GPU at batch 1, 4.0x faster on GPU at batch 64 and 3.9x faster on CPU. Text embeddings are cached, so at inference there is no text encoder.
 
 ## 10. Ablation: 30 epochs instead of 5 (seed 0)
 
@@ -165,6 +167,6 @@ The student has 7.7x fewer parameters. It runs 4.0x faster on GPU at batch 64 an
 | A+B | 0.653 [0.642, 0.661] | 0.642 [0.630, 0.653] | 0.679 [0.665, 0.693] | 0.832 [0.816, 0.848] |
 
 - 6x the training does not change any distilled arm. Every number is within 0.004 of the 5-epoch run.
-- Supervised loses 0.06 on NIH test (0.760 -> 0.700) and 0.08 on IU-Xray (0.759 -> 0.681). The teacher's soft targets keep the distilled arms from overfitting; hard labels do not.
-- B's held-out gap is the same at 30 epochs (0.563). It comes from the loss, not from the training length.
+- Supervised loses 0.06 on NIH test (0.760 -> 0.700) and 0.08 on IU-Xray (0.759 -> 0.681). The distilled arms do not overfit at this length and the supervised arm does.
+- B's held-out gap is the same at 30 epochs (0.563). Training longer does not close it.
 - Cosine to the teacher embedding: A 0.983, B 0.200, A+B 0.982. Score corr held-out: A 0.963, B 0.699, A+B 0.961.
