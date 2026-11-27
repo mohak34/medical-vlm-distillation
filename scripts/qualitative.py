@@ -15,6 +15,7 @@ import torch.nn.functional as F
 from sklearn.manifold import TSNE
 
 from medical_vlm_distillation.data import FINDINGS, ROOT, load_splits, normalize, open_images
+from medical_vlm_distillation.device import DEVICE
 from medical_vlm_distillation.student import make_student
 from medical_vlm_distillation.teacher import load_cache, load_teacher, prompt_probs
 from medical_vlm_distillation.train import RUNS
@@ -62,11 +63,11 @@ def gradcam(acts: torch.Tensor, grads: torch.Tensor) -> np.ndarray:
 
 
 def gradcam_figure(arm: str, seed: int, splits, cache, n: int = 4) -> None:
-    bank = cache["bank"].cuda()
+    bank = cache["bank"].to(DEVICE)
     test = np.flatnonzero(splits["split"] == "test")
     s_emb = torch.load(RUNS / f"{arm}_s{seed}" / "preds.pt", weights_only=False)["test"]
-    p_s = prompt_probs(s_emb.cuda(), bank)[:, 0].cpu().numpy()
-    p_t = prompt_probs(cache["emb"][test].float().cuda(), bank)[:, 0].cpu().numpy()
+    p_s = prompt_probs(s_emb.to(DEVICE), bank)[:, 0].cpu().numpy()
+    p_t = prompt_probs(cache["emb"][test].float().to(DEVICE), bank)[:, 0].cpu().numpy()
     # disagreement on the rank scale, positives only, for the finding where the two disagree most
     rank = lambda p: p.argsort(0).argsort(0) / len(p)  # noqa: E731
     r_s, r_t = rank(p_s), rank(p_t)
@@ -77,14 +78,14 @@ def gradcam_figure(arm: str, seed: int, splits, cache, n: int = 4) -> None:
     chosen = cand[np.argsort(-gap[cand, f])[:n]]
 
     teacher = load_teacher()
-    student = make_student(512).cuda().eval()
-    student.load_state_dict(torch.load(RUNS / f"{arm}_s{seed}" / "final.pt", weights_only=True))
+    student = make_student(512).to(DEVICE).eval()
+    student.load_state_dict(torch.load(RUNS / f"{arm}_s{seed}" / "final.pt", map_location="cpu", weights_only=True))
     store = open_images()
     direction = bank[0, f, 0] - bank[0, f, 1]
 
     fig, axes = plt.subplots(n, 3, figsize=(7.5, 2.6 * n))
     for r, i in enumerate(chosen):
-        x = normalize(torch.from_numpy(np.array(store[test[i]]))[None].cuda()).requires_grad_(False)
+        x = normalize(torch.from_numpy(np.array(store[test[i]]))[None].to(DEVICE)).requires_grad_(False)
         maps = []
         layers = (teacher.get_submodule("visual.transformer.resblocks.10"), student.get_submodule("layer4"))
         for model, layer in zip((teacher, student), layers, strict=True):

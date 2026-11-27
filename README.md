@@ -49,7 +49,7 @@ Generalization tests were fixed before training:
 
 ## Setup
 
-Needs a CUDA GPU (developed on an 8 GB RTX 3080 Laptop) and [uv](https://docs.astral.sh/uv/).
+Needs [uv](https://docs.astral.sh/uv/) and a GPU (NVIDIA or Apple Silicon). Set `DEVICE=cpu|cuda|mps` to override the automatic choice.
 
 ```bash
 uv sync
@@ -58,7 +58,7 @@ scripts/download.sh            # ~45 GB NIH zips + metadata + CheXzero checkpoin
 
 ## Pipeline
 
-Run each step from the repo root. Times are on the machine above.
+Run each step from the repo root. Times are on an 8 GB laptop GPU.
 
 ```bash
 # 1. NIH: decode the 112,120 PNGs with CheXzero's preprocessing into data/nih_224.npy (uint8),
@@ -80,7 +80,7 @@ uv run python -m medical_vlm_distillation.train A --epochs 30 --limit 256 --name
 
 # 6. Full runs: 4 arms x seeds 0-2, 5 epochs each (~6 min per run). Logs in runs/<arm>_s<seed>/train.log.
 #    Long-schedule ablation (30 epochs, seed 0): EPOCHS=30 SEEDS=0 scripts/run_all.sh, then evaluate.py --tag _e30
-nohup scripts/run_all.sh > runs/run_all.log 2>&1 &
+mkdir -p runs && nohup scripts/run_all.sh > runs/run_all.log 2>&1 &
 
 # 7. Tables (NIH test with patient-level bootstrap CIs, held-out, paraphrases, IU-Xray, agreement) -> results/
 uv run python scripts/evaluate.py --seed 0

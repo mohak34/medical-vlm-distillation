@@ -8,6 +8,7 @@ import torch
 from torch import nn
 
 from medical_vlm_distillation.data import ROOT
+from medical_vlm_distillation.device import DEVICE, device_name, synchronize
 from medical_vlm_distillation.student import make_student
 from medical_vlm_distillation.teacher import load_teacher
 
@@ -18,13 +19,11 @@ def latency_ms(model: nn.Module, device: str, batch: int, reps: int) -> float:
     x = torch.randn(batch, 3, 224, 224, device=device)
     for _ in range(5):
         model(x)
-    if device == "cuda":
-        torch.cuda.synchronize()
+    synchronize(device)
     t = time.perf_counter()
     for _ in range(reps):
         model(x)
-    if device == "cuda":
-        torch.cuda.synchronize()
+    synchronize(device)
     return (time.perf_counter() - t) / reps * 1000
 
 
@@ -34,18 +33,16 @@ def main() -> None:
     rows = []
     for name, m in models.items():
         n = sum(p.numel() for p in m.parameters())
-        rows.append({
-            "model": name,
-            "params (M)": f"{n / 1e6:.1f}",
-            "fp32 size (MB)": f"{n * 4 / 2**20:.0f}",
-            "GPU ms/img, batch 1": f"{latency_ms(m, 'cuda', 1, 200):.2f}",
-            "GPU ms/img, batch 64": f"{latency_ms(m, 'cuda', 64, 20) / 64:.3f}",
-            "CPU ms/img, batch 1": f"{latency_ms(m, 'cpu', 1, 30):.1f}",
-        })  # fmt: skip
+        r = {"model": name, "params (M)": f"{n / 1e6:.1f}", "fp32 size (MB)": f"{n * 4 / 2**20:.0f}"}
+        if DEVICE != "cpu":
+            r["GPU ms/img, batch 1"] = f"{latency_ms(m, DEVICE, 1, 200):.2f}"
+            r["GPU ms/img, batch 64"] = f"{latency_ms(m, DEVICE, 64, 20) / 64:.3f}"
+        r["CPU ms/img, batch 1"] = f"{latency_ms(m, 'cpu', 1, 30):.1f}"
+        rows.append(r)
     t = pd.DataFrame(rows)
     (ROOT / "results").mkdir(exist_ok=True)
     t.to_csv(ROOT / "results" / "efficiency.csv", index=False)
-    print(f"torch threads {torch.get_num_threads()}, {torch.cuda.get_device_name()}, fp32\n")
+    print(f"torch threads {torch.get_num_threads()}, {device_name()}, fp32\n")
     print(t.to_markdown(index=False))
 
 

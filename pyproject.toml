@@ -3,7 +3,8 @@ name = "medical-vlm-distillation"
 version = "0.1.0"
 description = "Distill CheXzero into a ResNet-18 student"
 authors = [
-    { name = "mohak34", email = "mohaks0408@gmail.com" }
+    { name = "mohak34", email = "mohaks0408@gmail.com" },
+    { name = "Gautham Mallipeddi" },
 ]
 requires-python = ">=3.12"
 dependencies = [

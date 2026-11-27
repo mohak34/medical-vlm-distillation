@@ -19,6 +19,7 @@ from medical_vlm_distillation.data import (
     open_images,
     resize_224,
 )
+from medical_vlm_distillation.device import DEVICE
 from medical_vlm_distillation.teacher import encode_images, load_teacher
 
 N = 256
@@ -37,8 +38,8 @@ def main(zip_name: str = "images_004.zip") -> None:
         exact.append(resize_224(x[None, None])[0].expand(3, -1, -1))
         stored.append(torch.from_numpy(np.array(store[row[m.rsplit("/", 1)[-1]]])))
     with torch.no_grad():
-        e = F.normalize(model.encode_image(torch.stack(exact).cuda()), dim=-1)
-    s = encode_images(model, torch.stack(stored).cuda())
+        e = F.normalize(model.encode_image(torch.stack(exact).to(DEVICE)), dim=-1)
+    s = encode_images(model, torch.stack(stored).to(DEVICE))
     cos = (e * s).sum(-1)
     print(f"{N} images: cosine(exact, stored) min {cos.min():.6f} mean {cos.mean():.6f}")
 

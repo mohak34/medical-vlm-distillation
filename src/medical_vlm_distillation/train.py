@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from medical_vlm_distillation.data import CXR, FINDINGS, IMAGES_NPY, ROOT, load_splits, normalize
+from medical_vlm_distillation.device import DEVICE, PIN_MEMORY
 from medical_vlm_distillation.evaluate import auroc_table
 from medical_vlm_distillation.student import embedding_loss, make_student, score_loss
 from medical_vlm_distillation.teacher import HELD_OUT, load_cache, prompt_probs
@@ -31,11 +32,11 @@ def seen_mask() -> torch.Tensor:
 def predict(model: torch.nn.Module, rows: np.ndarray, store: Path = IMAGES_NPY, batch: int = 512) -> torch.Tensor:
     """Raw head outputs (logits or embeddings), float32, in the order of `rows`."""
     model.eval()
-    loader = DataLoader(CXR(rows, store), batch_size=batch, num_workers=8, pin_memory=True)
+    loader = DataLoader(CXR(rows, store), batch_size=batch, num_workers=8, pin_memory=PIN_MEMORY)
     out = []
     for x, _ in loader:
-        with torch.autocast("cuda", dtype=torch.bfloat16):
-            out.append(model(normalize(x.cuda(non_blocking=True)).contiguous(memory_format=torch.channels_last)))
+        with torch.autocast(DEVICE, dtype=torch.bfloat16):
+            out.append(model(normalize(x.to(DEVICE, non_blocking=True)).contiguous(memory_format=torch.channels_last)))
     return torch.cat(out).float().cpu()
 
 
@@ -67,13 +68,13 @@ def train(
         val_rows = train_rows  # overfit check: measure fit on the training images themselves
 
     cache = load_cache()
-    t_emb = cache["emb"].cuda().float()
-    bank = cache["bank"].cuda()
-    scale = cache["logit_scale"].exp().cuda()
-    seen = seen_mask().cuda()
-    labels = torch.tensor(splits[FINDINGS].to_numpy(), dtype=torch.float32).cuda()
+    t_emb = cache["emb"].to(DEVICE).float()
+    bank = cache["bank"].to(DEVICE)
+    scale = cache["logit_scale"].exp().to(DEVICE)
+    seen = seen_mask().to(DEVICE)
+    labels = torch.tensor(splits[FINDINGS].to_numpy(), dtype=torch.float32).to(DEVICE)
 
-    model = make_student(14 if arm == "supervised" else 512).cuda().to(memory_format=torch.channels_last)
+    model = make_student(14 if arm == "supervised" else 512).to(DEVICE).to(memory_format=torch.channels_last)
     gen = torch.Generator().manual_seed(seed)
     loader = DataLoader(
         CXR(train_rows),
@@ -81,7 +82,7 @@ def train(
         shuffle=True,
         drop_last=len(train_rows) > batch,
         num_workers=8,
-        pin_memory=True,
+        pin_memory=PIN_MEMORY,
         persistent_workers=True,
         generator=gen,
     )
@@ -108,8 +109,8 @@ def train(
         model.train()
         t0, total, n = time.time(), 0.0, 0
         for x, rows in loader:
-            x, rows = x.cuda(non_blocking=True), rows.cuda(non_blocking=True)
-            with torch.autocast("cuda", dtype=torch.bfloat16):
+            x, rows = x.to(DEVICE, non_blocking=True), rows.to(DEVICE, non_blocking=True)
+            with torch.autocast(DEVICE, dtype=torch.bfloat16):
                 y = model(normalize(x).contiguous(memory_format=torch.channels_last))
             y = y.float()
             if arm == "supervised":
@@ -146,8 +147,8 @@ def monitor(arm: Arm, model, rows: np.ndarray, t_emb, bank, labels) -> str:
     both = (lab.min(0) == 0) & (lab.max(0) == 1)  # AUROC is undefined for a finding with one class in `rows`
     if arm == "supervised":
         return f"val macro AUROC {auroc_table(lab[:, both], y.sigmoid().numpy()[:, both]).mean():.4f}"
-    cos = F.cosine_similarity(y.cuda(), t_emb[rows], dim=-1).mean().item()
-    p_s = prompt_probs(y.cuda(), bank)[:, 0].cpu().numpy()
+    cos = F.cosine_similarity(y.to(DEVICE), t_emb[rows], dim=-1).mean().item()
+    p_s = prompt_probs(y.to(DEVICE), bank)[:, 0].cpu().numpy()
     p_t = prompt_probs(t_emb[rows], bank)[:, 0].cpu().numpy()
     a = auroc_table(lab[:, both], p_s[:, both]).mean()
     corr = np.mean([np.corrcoef(p_s[:, f], p_t[:, f])[0, 1] for f in range(p_s.shape[1])])

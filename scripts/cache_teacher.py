@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from medical_vlm_distillation.data import CXR, FINDINGS, load_splits
+from medical_vlm_distillation.device import DEVICE, PIN_MEMORY
 from medical_vlm_distillation.evaluate import auroc_table
 from medical_vlm_distillation.teacher import (
     CACHE,
@@ -21,14 +22,14 @@ from medical_vlm_distillation.teacher import (
 def main() -> None:
     splits = load_splits()
     model = load_teacher()
-    loader = DataLoader(CXR(np.arange(len(splits))), batch_size=256, num_workers=8, pin_memory=True)
+    loader = DataLoader(CXR(np.arange(len(splits))), batch_size=256, num_workers=8, pin_memory=PIN_MEMORY)
     emb = torch.empty(len(splits), 512, dtype=torch.float16)
     for i, (x, rows) in enumerate(loader):
-        emb[rows] = encode_images(model, x.cuda(non_blocking=True)).half().cpu()
+        emb[rows] = encode_images(model, x.to(DEVICE, non_blocking=True)).half().cpu()
         if i % 50 == 0:
             print(f"{i * 256}/{len(splits)}", flush=True)
     bank = text_bank(model).cpu()
-    probs = torch.cat([prompt_probs(e.cuda(), bank.cuda()).cpu() for e in emb.split(4096)])
+    probs = torch.cat([prompt_probs(e.to(DEVICE), bank.to(DEVICE)).cpu() for e in emb.split(4096)])
     CACHE.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {"emb": emb, "probs": probs, "bank": bank, "logit_scale": model.logit_scale.detach().cpu(), "ckpt": CKPT.name},

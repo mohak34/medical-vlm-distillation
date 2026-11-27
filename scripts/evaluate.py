@@ -14,6 +14,7 @@ import torch
 import torch.nn.functional as F
 
 from medical_vlm_distillation.data import FINDINGS, IU_CSV, IU_NPY, ROOT, load_splits
+from medical_vlm_distillation.device import DEVICE
 from medical_vlm_distillation.evaluate import auroc_table, boot_auroc, boot_weights, ci
 from medical_vlm_distillation.student import make_student
 from medical_vlm_distillation.teacher import (
@@ -37,7 +38,7 @@ def iu_teacher_emb() -> torch.Tensor:
     if not path.exists():
         model = load_teacher()
         store = np.load(IU_NPY)
-        emb = torch.cat([encode_images(model, torch.from_numpy(b).cuda()).cpu() for b in np.array_split(store, 32)])
+        emb = torch.cat([encode_images(model, torch.from_numpy(b).to(DEVICE)).cpu() for b in np.array_split(store, 32)])
         torch.save(emb, path)
     return torch.load(path, weights_only=True)
 
@@ -46,7 +47,7 @@ def scores(arm: str, out: torch.Tensor, bank: torch.Tensor) -> np.ndarray:
     """(N, templates, F) P(finding). Supervised has one 'template' (its own sigmoid head)."""
     if arm == "supervised":
         return out.sigmoid()[:, None].numpy()
-    return prompt_probs(out.cuda(), bank.cuda()).cpu().numpy()
+    return prompt_probs(out.to(DEVICE), bank.to(DEVICE)).cpu().numpy()
 
 
 def main() -> None:
@@ -79,8 +80,8 @@ def main() -> None:
             continue
         preds = torch.load(run / "preds.pt", weights_only=False)
         assert np.array_equal(preds["rows"]["test"], test_rows)
-        model = make_student(14 if arm == "supervised" else 512).cuda().to(memory_format=torch.channels_last)
-        model.load_state_dict(torch.load(run / "final.pt", weights_only=True))
+        model = make_student(14 if arm == "supervised" else 512).to(DEVICE).to(memory_format=torch.channels_last)
+        model.load_state_dict(torch.load(run / "final.pt", map_location="cpu", weights_only=True))
         iu_out = predict(model, np.arange(len(iu)), IU_NPY)
         raw = None if arm == "supervised" else preds["test"]
         models[label] = (scores(arm, preds["test"], bank), scores(arm, iu_out, bank), raw)

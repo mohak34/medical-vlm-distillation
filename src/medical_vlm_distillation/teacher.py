@@ -8,6 +8,7 @@ import torch.nn.functional as F
 
 from medical_vlm_distillation.chexzero_model import CLIP, build_model
 from medical_vlm_distillation.data import DATA, FINDINGS, PROMPT_NAMES, ROOT, normalize
+from medical_vlm_distillation.device import DEVICE
 
 CKPT_DIR = ROOT / "checkpoints" / "CheXzero_Models"
 # Pinned: highest validation score of the authors' released checkpoints (0.864, tied; first by name).
@@ -26,7 +27,7 @@ TEMPLATES: list[tuple[str, str]] = [
 ]
 
 
-def load_teacher(ckpt: Path = CKPT, device: str = "cuda") -> CLIP:
+def load_teacher(ckpt: Path = CKPT, device: str = DEVICE) -> CLIP:
     sd = torch.load(ckpt, map_location="cpu", weights_only=True)
     return build_model(sd).float().eval().to(device)
 
@@ -38,7 +39,7 @@ def encode_images(model: CLIP, x_uint8: torch.Tensor) -> torch.Tensor:
 
 
 @torch.no_grad()
-def text_bank(model: CLIP, device: str = "cuda") -> torch.Tensor:
+def text_bank(model: CLIP, device: str = DEVICE) -> torch.Tensor:
     """(templates, findings, 2 = pos/neg, 512), each prompt embedded alone and L2-normalized (as CheXzero)."""
     texts = [t.format(PROMPT_NAMES[f]) for pos_neg in TEMPLATES for f in FINDINGS for t in pos_neg]
     tokens = open_clip.tokenize(texts, context_length=77).to(device)
