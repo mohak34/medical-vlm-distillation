@@ -26,6 +26,14 @@ def synchronize(device: str = DEVICE) -> None:
         torch.mps.synchronize()
 
 
+def empty_cache(device: str = DEVICE) -> None:
+    """Return cached, unused allocator memory. Matters on MPS, where GPU memory is the system's RAM."""
+    if device == "cuda":
+        torch.cuda.empty_cache()
+    elif device == "mps":
+        torch.mps.empty_cache()
+
+
 def device_name(device: str = DEVICE) -> str:
     if device == "cuda":
         return torch.cuda.get_device_name()

@@ -13,7 +13,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from medical_vlm_distillation.data import CXR, FINDINGS, IMAGES_NPY, ROOT, load_splits, normalize
-from medical_vlm_distillation.device import DEVICE, PIN_MEMORY
+from medical_vlm_distillation.device import DEVICE, PIN_MEMORY, empty_cache
 from medical_vlm_distillation.evaluate import auroc_table
 from medical_vlm_distillation.student import embedding_loss, make_student, score_loss
 from medical_vlm_distillation.teacher import HELD_OUT, load_cache, prompt_probs
@@ -37,7 +37,10 @@ def predict(model: torch.nn.Module, rows: np.ndarray, store: Path = IMAGES_NPY, 
     for x, _ in loader:
         with torch.autocast(DEVICE, dtype=torch.bfloat16):
             out.append(model(normalize(x.to(DEVICE, non_blocking=True)).contiguous(memory_format=torch.channels_last)))
-    return torch.cat(out).float().cpu()
+    result = torch.cat(out).float().cpu()
+    del out
+    empty_cache()  # drop the batch-512 eval buffers before training resumes at batch 128
+    return result
 
 
 def train(
